@@ -8,6 +8,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { QuickstartPreCallCard } from "@/components/QuickstartPreCallCard";
+import { TodoBoard } from "@/components/TodoBoard";
 import { ShareButton } from "@/components/share-button";
 import { getConfig, startAgent, stopAgent } from "@/services/api";
 import type { AgoraRenewalTokens, AgoraTokenData } from "@/types/conversation";
@@ -218,18 +219,25 @@ export default function LandingPage() {
 									as expected.
 								</div>
 							) : null}
-							<Suspense fallback={<LoadingSkeleton />}>
-								<ErrorBoundary>
-									<AgoraProvider>
-										<ConversationComponent
-											agoraData={agoraData}
-											rtmClient={rtmClient}
-											onTokenWillExpire={handleTokenWillExpire}
-											onEndConversation={handleEndConversation}
-										/>
-									</AgoraProvider>
-								</ErrorBoundary>
-							</Suspense>
+							<div className="flex min-h-0 flex-1 flex-col gap-2 lg:flex-row">
+								<div className="min-h-0 flex-1 overflow-hidden border-b lg:border-b-0 lg:border-r">
+									<TodoBoard active={showConversation} />
+								</div>
+								<div className="flex min-h-0 flex-1 flex-col">
+									<Suspense fallback={<LoadingSkeleton />}>
+										<ErrorBoundary>
+											<AgoraProvider>
+												<ConversationComponent
+													agoraData={agoraData}
+													rtmClient={rtmClient}
+													onTokenWillExpire={handleTokenWillExpire}
+													onEndConversation={handleEndConversation}
+												/>
+											</AgoraProvider>
+										</ErrorBoundary>
+									</Suspense>
+								</div>
+							</div>
 						</>
 					) : (
 						<p className="text-sm text-muted-foreground">

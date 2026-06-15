@@ -15,9 +15,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-	title: "RPG Gaming Recipe | Agora Conversational AI",
+	title: "Agora Voice Todo Board",
 	description:
-		"Recipe: a voice RPG where a managed-LLM Dungeon Master narrates and an MCP server resolves dice and combat.",
+		"Manage a kanban todo board by voice with Agora Conversational AI.",
 	icons: {
 		icon: [
 			{ url: "/favicon.ico" },
