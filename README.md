@@ -77,7 +77,7 @@ reach the backend.
 
 The backend must be publicly reachable so Agora cloud can call `/mcp`. A single
 Docker image is published to
-`ghcr.io/AgoraIO-Conversational-AI/recipe-agent-todo` on `v*` tags. It runs one
+`ghcr.io/AgoraIO-Conversational-AI/recipe-agent-voice-todo` on `v*` tags. It runs one
 process on port 8000 with the FastMCP todo server mounted at `/mcp`.
 
 > **Co-public caveat:** mounting `/mcp` on `:8000` makes the token endpoints

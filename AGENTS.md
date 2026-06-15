@@ -1,6 +1,6 @@
 # Agent Development Guide
 
-For coding agents working in `recipe-agent-todo`. This repository is the **voice
+For coding agents working in `recipe-agent-voice-todo`. This repository is the **voice
 todo board** recipe in the Agora Conversational AI recipes family. A managed
 keyless OpenAI assistant manages a 3-column kanban by calling **MCP board tools**;
 the FastMCP todo server is mounted in-process inside the API server at `/mcp`

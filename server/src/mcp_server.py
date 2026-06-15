@@ -9,7 +9,7 @@ from mcp.server.fastmcp import FastMCP
 import board
 
 MCP_PORT = int(os.getenv("MCP_PORT", "8001"))
-mcp = FastMCP("recipe-agent-todo", host="0.0.0.0", port=MCP_PORT)
+mcp = FastMCP("recipe-agent-voice-todo", host="0.0.0.0", port=MCP_PORT)
 
 
 def _run(fn, *args) -> str:
