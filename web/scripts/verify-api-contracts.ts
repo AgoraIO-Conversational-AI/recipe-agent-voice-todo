@@ -67,6 +67,18 @@ async function verifyRewriteContract() {
       ),
       'next.config.ts should rewrite /api/stopAgent to /stopAgent on the Python backend',
     )
+    assert(
+      rewrites.some(
+        (rewrite) => rewrite.source === '/api/board' && rewrite.destination === 'http://localhost:8000/board',
+      ),
+      'next.config.ts should rewrite /api/board to /board on the Python backend',
+    )
+    assert(
+      rewrites.some(
+        (rewrite) => rewrite.source === '/api/board/reset' && rewrite.destination === 'http://localhost:8000/board/reset',
+      ),
+      'next.config.ts should rewrite /api/board/reset to /board/reset on the Python backend',
+    )
   } finally {
     if (originalBackendUrl) {
       process.env.AGENT_BACKEND_URL = originalBackendUrl
