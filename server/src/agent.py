@@ -1,10 +1,10 @@
 """
-Agent — RPG DM Recipe
+Agent — Todo Board Assistant Recipe
 
 High-level API for managing Agora Conversational AI Agents with managed OpenAI
-and RPG game tool calling. Agora cloud orchestrates the MCP server — the managed
+and todo-board tool calling. Agora cloud orchestrates the MCP server — the managed
 OpenAI LLM emits a tool call, Agora invokes the separate mcp/ server (public
-MCP_ENDPOINT), returns the result, and the Dungeon Master speaks it.
+MCP_ENDPOINT), returns the result, and the todo assistant speaks it.
 
 OPENAI_API_KEY is optional — Agora manages the OpenAI key (keyless).
 MCP_ENDPOINT must be PUBLIC — Agora cloud (not this server) calls it.
@@ -21,18 +21,30 @@ from mcp_config import build_mcp_servers
 
 logger = logging.getLogger("uvicorn.error")
 
-AGENT_GREETING = "Welcome, adventurer! I'm your Dungeon Master. Choose your class — warrior, mage, rogue, or cleric — and we begin."
+AGENT_GREETING = "Hi! I'm your todo assistant. Tell me to add, move, or finish tasks — for example, 'move buy milk to in progress'."
+
+TODO_PROMPT = (
+    "You are a concise voice assistant that manages the user's kanban todo board. "
+    "The board has exactly three columns: To Do, In Progress, and Done. ALWAYS use "
+    "the tools to change the board — never just claim you did it. Call add_task to "
+    "create a task; move_task to move, start, or finish a task (for 'done', "
+    "'finished', or 'complete', pass column 'done'); delete_task to remove one; and "
+    "list_tasks ONLY when the user explicitly asks what's on the board. After a tool "
+    "returns, confirm ONLY what changed in one short sentence — NEVER read the whole "
+    "board aloud unless the user explicitly asks you to list it. If a tool reports no "
+    "matching task, ask the user which task they mean."
+)
 
 
 class Agent:
     """
     High-level wrapper for Agora Conversational AI Agent with managed OpenAI
-    and RPG game tool calling (Dungeon Master).
+    and todo-board tool calling.
 
     The managed OpenAI vendor is keyless — Agora handles the API key. When the
-    player takes an action, the DM LLM emits a tool call, Agora invokes the
-    mcp/ server at MCP_ENDPOINT, and the game result is returned to the LLM so
-    it can narrate the outcome.
+    user requests a board change, the todo LLM emits a tool call, Agora invokes
+    the mcp/ server at MCP_ENDPOINT, and the result is returned to the LLM so
+    it can confirm what changed.
 
     IMPORTANT: MCP_ENDPOINT must be publicly accessible for the Agora
     Conversational AI Engine (cloud) to reach the mcp/ server. For local
@@ -75,7 +87,7 @@ class Agent:
         user_uid: int,
         output_audio_codec: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Start RPG DM agent with managed OpenAI + game tool calling."""
+        """Start todo agent with managed OpenAI + board tool calling."""
         if not channel_name or not str(channel_name).strip():
             raise ValueError("channel_name is required and cannot be empty")
         if agent_uid <= 0:
@@ -88,15 +100,7 @@ class Agent:
         llm = OpenAI(
             api_key=self.openai_api_key,
             model=self.openai_model,
-            system_messages=[{"role": "system", "content": (
-                "You are a dramatic but concise voice Dungeon Master running a fantasy RPG. "
-                "You narrate vividly in 1-3 sentences. CRITICAL: you MUST use the game tools to "
-                "resolve every mechanic and NEVER invent dice rolls, damage, HP, gold, loot, or "
-                "outcomes. Call create_character when the player picks a class; start_encounter to "
-                "begin a fight; attack or cast_spell during combat; flee to escape; get_character "
-                "for stats or inventory. After a tool returns, narrate ONLY what it reported. If the "
-                "player has no character yet, ask them to choose warrior, mage, rogue, or cleric."
-            )}],
+            system_messages=[{"role": "system", "content": TODO_PROMPT}],
             mcp_servers=build_mcp_servers(self.mcp_endpoint),
             greeting_message=self.greeting,
         )
@@ -158,7 +162,7 @@ class Agent:
         )
 
         logger.info(
-            "Starting RPG DM agent channel=%s agent_uid=%s user_uid=%s mcp_endpoint=%s",
+            "Starting todo agent channel=%s agent_uid=%s user_uid=%s mcp_endpoint=%s",
             channel_name,
             agent_uid,
             user_uid,
@@ -169,7 +173,7 @@ class Agent:
             agent_id = await session.start()
         except Exception:
             logger.exception(
-                "Failed to start RPG DM agent channel=%s agent_uid=%s user_uid=%s",
+                "Failed to start todo agent channel=%s agent_uid=%s user_uid=%s",
                 channel_name,
                 agent_uid,
                 user_uid,
@@ -180,7 +184,7 @@ class Agent:
         self._sessions[agent_id] = session
 
         logger.info(
-            "Started RPG DM agent agent_id=%s channel=%s",
+            "Started todo agent agent_id=%s channel=%s",
             agent_id,
             channel_name,
         )
