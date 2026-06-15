@@ -1,20 +1,20 @@
-# Agora Conversational AI — RPG Gaming Recipe (Python)
+# Agora Conversational AI — Voice Todo Board Recipe (Python)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python](https://img.shields.io/badge/python-%3E%3D3.10-blue)](https://www.python.org/)
 [![Bun](https://img.shields.io/badge/bun-latest-black)](https://bun.sh/)
 
-The **RPG gaming** recipe in the Agora Conversational AI recipes family. A voice
-RPG where a managed-LLM **Dungeon Master** narrates the adventure and calls
-**game tools** mounted in the same backend process. The player speaks; the DM
-resolves every mechanic — dice rolls, combat, loot, inventory — through 6
-self-contained MCP tools backed by SQLite. STT (Deepgram) and TTS (MiniMax) are
+The **voice todo board** recipe in the Agora Conversational AI recipes family. A
+managed-keyless OpenAI assistant manages a **3-column kanban** (To Do / In
+Progress / Done) through four MCP tools mounted in the same backend process. The
+user speaks to add, move, or delete tasks; the web client polls `GET /board` and
+the card visibly moves columns in real time. STT (Deepgram) and TTS (MiniMax) are
 Agora-managed.
 
-This recipe is **zero-key**: OpenAI is Agora-managed (no `OPENAI_API_KEY`
-needed, though you may supply your own). The FastMCP game server is mounted
-in-process — one backend, one port (**:8000**). The full pipeline runs locally
-with only Agora credentials and a public tunnel.
+This recipe is **zero-key**: OpenAI is Agora-managed (no `OPENAI_API_KEY` needed,
+though you may supply your own). The FastMCP todo server is mounted in-process —
+one backend, one port (**:8000**). The full pipeline runs locally with only Agora
+credentials and a public tunnel.
 
 **Distinct from `recipe-agent-tool-calling`**: in that recipe tools run inside
 the `llm/` endpoint. Here Agora cloud orchestrates them on a **FastMCP server**
@@ -51,7 +51,8 @@ bun run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) → **Start Conversation** →
-say "I want to be a warrior" to create your hero, then explore and fight.
+say "add buy milk" to create a task, or "move buy milk to in progress" to update
+it.
 
 ### Working from a clone
 
@@ -64,7 +65,7 @@ frontend. You still need Agora credentials in `server/.env.local` and a public
 Services:
 
 - Frontend — http://localhost:3000
-- Backend + MCP game server — http://localhost:8000
+- Backend + MCP todo server — http://localhost:8000
 - API docs — http://localhost:8000/docs
 - MCP endpoint — http://localhost:8000/mcp
 
@@ -76,8 +77,14 @@ reach the backend.
 
 The backend must be publicly reachable so Agora cloud can call `/mcp`. A single
 Docker image is published to
-`ghcr.io/AgoraIO-Conversational-AI/recipe-agent-rpg` on `v*` tags. It runs one
-process on port 8000 with the FastMCP game server mounted at `/mcp`.
+`ghcr.io/AgoraIO-Conversational-AI/recipe-agent-todo` on `v*` tags. It runs one
+process on port 8000 with the FastMCP todo server mounted at `/mcp`.
+
+> **Co-public caveat:** mounting `/mcp` on `:8000` makes the token endpoints
+> co-public with the MCP server. The App Certificate is only used to mint tokens
+> in-memory and is never sent on the wire, but `/get_config` and `/startAgent`
+> are unauthenticated in the dev configuration. Add authentication and
+> rate-limiting before exposing the backend on a production URL.
 
 ## Environment variables
 
@@ -88,12 +95,10 @@ Backend env file: [`server/.env.example`](server/.env.example).
 | `AGORA_APP_ID` | Yes | — | Agora Console → Project → App ID |
 | `AGORA_APP_CERTIFICATE` | Yes | — | Agora Console → Project → App Certificate |
 | `MCP_ENDPOINT` | Yes | — | **Public** URL ending in `/mcp` (e.g. `https://<tunnel>/mcp`). Agora cloud calls it; cannot be `localhost`. |
-| `OPENAI_MODEL` | | `gpt-4o-mini` | Model name for the managed Dungeon Master LLM |
-| `RPG_DB_PATH` | | `/tmp/rpg.db` | Path to the SQLite database for game state |
-| `RPG_SEED` | | — | Optional integer seed for deterministic dice (useful for testing) |
+| `OPENAI_MODEL` | | `gpt-4o-mini` | Model name for the managed todo assistant LLM |
+| `BOARD_DB_PATH` | | `board.db` | Path to the SQLite board database (`/tmp/board.db` in Docker) |
 | `OPENAI_API_KEY` | | — | Optional — Agora manages the OpenAI key (keyless by default) |
-| `AGENT_GREETING` | | built-in | Optional override for the DM's opening line |
-| `PORT` | | `8000` | Agent backend port |
+| `AGENT_GREETING` | | built-in | Optional override for the assistant's opening line |
 | `AGENT_BACKEND_URL` (web deploy) | Yes (deploy) | — | Required when deploying `web` |
 
 ## Commands
@@ -120,51 +125,65 @@ Browser (localhost:3000)
   │  fetch /api/*
   ▼
 Next.js  ──rewrite──▶  Agent backend  (server/, localhost:8000)
-                          │  starts agent session (Dungeon Master LLM + mcp_servers)
-                          │  also serves /mcp  (FastMCP game server, in-process)
+                          │  starts agent session (todo LLM + mcp_servers)
+                          │  also serves /mcp  (FastMCP todo server, in-process)
+                          │  also serves GET /board  (kanban snapshot for web UI)
                           ▼
                        Agora ConvoAI Cloud
                           │  user speech → Deepgram STT (managed)
-                          │  Dungeon Master LLM (managed OpenAI, keyless) → emits tool call
+                          │  todo assistant LLM (managed OpenAI, keyless) → emits tool call
                           │  POST <MCP_ENDPOINT>   (streamable-http)
                           ▼
-                       FastMCP game server  (mounted at /mcp, same process)
+                       FastMCP todo server  (mounted at /mcp, same process)
                           │  public via ngrok tunnel on :8000
-                          │  resolves dice/combat/inventory → returns result
+                          │  mutates SQLite board → returns post-mutation snapshot
                           ▼
-                       Agora ConvoAI Cloud → DM narrates outcome
+                       Agora ConvoAI Cloud → assistant speaks one-line confirmation
                                           → MiniMax TTS (managed) → user hears speech
                                           → RTM transcript / metrics → web UI
+Web client polls GET /api/board (~1 s) → card visibly moves columns in kanban
 ```
 
 The browser only ever calls Next `/api/*`, which rewrites to the agent backend.
-The agent backend owns Agora tokens, agent lifecycle, **and** the FastMCP game
+The agent backend owns Agora tokens, agent lifecycle, **and** the FastMCP todo
 server — all in one process on port 8000. See [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+## Repo Map
+
+- `web/` — Next.js frontend (:3000); RTC/RTM lifecycle, voice UI, and live
+  `TodoBoard` kanban panel that polls `GET /api/board`.
+- `server/` — FastAPI agent backend (:8000); Agora tokens, todo assistant agent
+  lifecycle, board read/reset endpoints, and the FastMCP todo server (mounted at `/mcp`).
+- `server/src/board.py` — pure todo-board store (SQLite, no MCP dependency, fully unit-testable).
+- `server/src/mcp_server.py` — FastMCP wrapper exposing the four board tools.
+- `ARCHITECTURE.md` — system shape and component boundaries.
+- `AGENTS.md` — guide for coding agents working in this repo.
 
 ## What You Get
 
-- A **voice RPG** where a managed-LLM Dungeon Master narrates the adventure and
-  calls game tools — no UI to click, no state to manage client-side.
-- A managed-LLM DM that narrates and calls **6 self-contained MCP tools**: dice
-  rolling, character creation, combat rounds, spells, fleeing, and inventory reads.
-- **SQLite** backs dice, combat, and inventory — no external game server or
-  database required.
-- **Zero-key**: OpenAI is Agora-managed and the game engine needs no external
+- A **voice todo board** where a managed-LLM assistant manages a 3-column kanban
+  — no form to fill out, no drag-and-drop required.
+- A managed-LLM assistant that calls **4 self-contained MCP tools**: adding tasks,
+  moving tasks between columns, deleting tasks, and listing the board.
+- A **live kanban panel** in the web UI that updates automatically as the board
+  changes; a "Reset board" button restores the seed tasks.
+- **SQLite** backs the board — no external task store or database required.
+- **Zero-key**: OpenAI is Agora-managed and the board needs no external
   credentials. The full pipeline runs locally with only Agora credentials and a
   public tunnel.
 
-| Tool | When the DM calls it |
-| --- | --- |
-| `create_character(char_class)` | Player picks or changes their class (warrior/mage/rogue/cleric) |
-| `get_character()` | Player asks about their stats, HP, gold, or inventory |
-| `start_encounter()` | Player looks for a fight or the story leads into danger |
-| `attack()` | Player attacks the current enemy |
-| `cast_spell(name)` | Player casts their class spell |
-| `flee()` | Player runs from combat |
+### Tools
 
-Each tool opens its own SQLite connection, resolves the full action (including
-dice rolls and counterattacks), and returns a plain-English result for the DM to
-narrate. No chaining — one player utterance maps to at most one tool call.
+| Tool | When the assistant calls it |
+| --- | --- |
+| `add_task(title)` | User wants to create or add a task |
+| `move_task(title, column)` | User wants to move, start, or finish a task — "done", "finished", or "complete" all map to the Done column |
+| `delete_task(title)` | User wants to remove, delete, or drop a task |
+| `list_tasks()` | User explicitly asks what's on the board |
+
+Each tool opens its own SQLite connection, mutates the board, and returns a
+plain-English string that embeds the post-mutation snapshot. No chaining — one
+user utterance maps to at most one tool call.
 
 ## How It Works
 
@@ -172,36 +191,43 @@ narrate. No chaining — one player utterance maps to at most one tool call.
 2. The browser joins the RTC channel, then calls `/api/startAgent`; the backend
    starts an agent session using the managed `OpenAI` vendor with `mcp_servers`
    pointing at the public `MCP_ENDPOINT` (`<tunnel>/mcp`) and `enable_tools: true`.
-3. The user speaks (e.g. "I want to be a warrior"). Agora runs STT (Deepgram)
-   and sends the transcript to the managed Dungeon Master LLM.
-4. The DM decides to call `create_character("warrior")`. Agora cloud issues a
+3. The user speaks (e.g. "add buy milk"). Agora runs STT (Deepgram) and sends the
+   transcript to the managed todo assistant LLM.
+4. The assistant decides to call `add_task("buy milk")`. Agora cloud issues a
    streamable-HTTP request to `MCP_ENDPOINT`. The FastMCP server (mounted at
-   `/mcp` in the same process) runs the tool and returns a narrative result string.
-5. Agora feeds the tool result back to the DM LLM, which narrates it (e.g.
-   "You are a warrior with 30 HP…"). Agora runs TTS (MiniMax) and plays it back.
-6. Later tools (`start_encounter`, `attack`, `cast_spell`, `flee`) resolve combat
-   in the same way — each tool is **self-contained** (dice rolled inside `game.py`,
-   no tool-call chaining).
-7. `/api/stopAgent` ends the session.
+   `/mcp` in the same process) runs the tool, inserts the task into SQLite, and
+   returns a result string that embeds the updated board snapshot.
+5. Agora feeds the tool result back to the assistant LLM, which speaks a one-line
+   confirmation (e.g. "Added buy milk to To Do."). Agora runs TTS (MiniMax) and
+   plays it back.
+6. The web client is polling `GET /api/board` roughly every second; the new task
+   appears in the To Do column without any page refresh.
+7. Subsequent commands (`move_task`, `delete_task`) resolve in the same way — each
+   tool is **self-contained** (board mutation inside `board.py`, no tool-call
+   chaining).
+8. `/api/stopAgent` ends the session.
 
-## Repo Map
+## Replacing the mock board
 
-- `web/` — Next.js frontend (:3000); RTC/RTM lifecycle and UI.
-- `server/` — FastAPI agent backend (:8000); Agora tokens, Dungeon Master agent
-  lifecycle, and the FastMCP game server (mounted at `/mcp`).
-- `server/src/game.py` — pure game engine (SQLite, no MCP dependency, fully unit-testable).
-- `server/src/mcp_server.py` — FastMCP wrapper exposing 6 game tools.
-- `ARCHITECTURE.md` — system shape and component boundaries.
-- `AGENTS.md` — guide for coding agents working in this repo.
+The board layer is intentionally thin and has no MCP dependency:
+
+- **`server/src/board.py`** — swap SQLite for a real task store (Postgres,
+  Notion API, etc.) by replacing `get_db`, `add_task`, `move_task`,
+  `delete_task`, `list_tasks`, and `reset`. The only contract the MCP layer
+  depends on is that mutating functions return a plain-English string embedding
+  the post-mutation snapshot.
+- **`server/src/mcp_server.py`** — the tool registry. Add, remove, or rename
+  tools here. Keep each tool self-contained (one call → one mutation → one result
+  string).
 
 ## Troubleshooting
 
 | Problem | Fix |
 | --- | --- |
-| DM greets but never calls a tool | `MCP_ENDPOINT` is not public or the `/mcp` path is wrong. Use your ngrok URL. |
+| Assistant greets but never calls a tool | `MCP_ENDPOINT` is not public or the `/mcp` path is wrong. Use your ngrok URL. |
 | `doctor:local` warns about localhost | Replace the local URL with your public tunnel URL. |
 | Local calls fail under a global proxy | Configure the proxy to send `127.0.0.1` and `localhost` DIRECT. |
-| Tests fail with wrong dice outcomes | Set `RPG_SEED` to a fixed integer; the tests already do this automatically. |
+| Kanban panel does not update | Check that `GET /api/board` returns 200; confirm the Next rewrite points to the running backend. |
 
 ## More Docs
 
