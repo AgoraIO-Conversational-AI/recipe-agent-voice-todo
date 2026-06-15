@@ -33,6 +33,19 @@ def test_parse_column_synonyms():
     assert board.parse_column("nonsense") is None
 
 
+def test_parse_column_to_done_is_not_todo():
+    # "to do" must not swallow "done" as a substring.
+    assert board.parse_column("move to done") == "done"
+    assert board.parse_column("to done") == "done"
+    assert board.parse_column("move it to do") == "todo"
+
+
+def test_parse_column_accepts_canonical_keys():
+    assert board.parse_column("in_progress") == "in_progress"
+    assert board.parse_column("todo") == "todo"
+    assert board.parse_column("done") == "done"
+
+
 def test_find_task_fuzzy():
     conn, _ = fresh()
     assert board.find_task(conn, "milk")[1] == "Buy milk"

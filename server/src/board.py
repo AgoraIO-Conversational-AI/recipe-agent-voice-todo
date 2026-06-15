@@ -5,6 +5,7 @@ Every mutating op returns a human-readable string that EMBEDS the post-mutation
 board snapshot, so the LLM tool result is self-grounding in a single call.
 """
 import os
+import re
 import sqlite3
 import time
 
@@ -15,10 +16,13 @@ COLUMNS = ("todo", "in_progress", "done")
 COLUMN_LABELS = {"todo": "To Do", "in_progress": "In Progress", "done": "Done"}
 
 # Free-text phrase -> canonical column. Longest phrases win (see parse_column).
+# Canonical keys ("todo"/"in_progress"/"done") are included so the LLM echoing an
+# internal key still resolves.
 _COLUMN_SYNONYMS = {
     "to do": "todo", "todo": "todo", "backlog": "todo", "not started": "todo",
-    "in progress": "in_progress", "in-progress": "in_progress", "doing": "in_progress",
-    "working on": "in_progress", "started": "in_progress", "wip": "in_progress",
+    "in progress": "in_progress", "in-progress": "in_progress", "in_progress": "in_progress",
+    "doing": "in_progress", "working on": "in_progress", "started": "in_progress",
+    "wip": "in_progress",
     "done": "done", "complete": "done", "completed": "done", "finished": "done",
 }
 
@@ -73,8 +77,11 @@ def parse_column(text: str):
     t = (text or "").strip().lower()
     if t in _COLUMN_SYNONYMS:
         return _COLUMN_SYNONYMS[t]
+    # Whole-word match, longest phrase first — so "move to done" matches "done"
+    # (not the "to do" substring inside "done"), while "move it to do" still maps
+    # to To Do.
     for phrase in sorted(_COLUMN_SYNONYMS, key=len, reverse=True):
-        if phrase in t:
+        if re.search(rf"\b{re.escape(phrase)}\b", t):
             return _COLUMN_SYNONYMS[phrase]
     return None
 
