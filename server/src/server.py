@@ -26,7 +26,7 @@ from agora_agent.agentkit.token import generate_convo_ai_token
 from agent import Agent
 import board
 
-# --- MCP mount (single-process): serve the FastMCP game server in this uvicorn ---
+# --- MCP mount (single-process): serve the FastMCP todo tool server in this uvicorn ---
 from contextlib import asynccontextmanager
 import mcp_server  # exposes `mcp = FastMCP(...)`
 
@@ -227,7 +227,7 @@ async def reset_board():
 
 app.include_router(router)
 
-# Mount the FastMCP game server in-process (serves its own /mcp path). Agora cloud
+# Mount the FastMCP todo tool server in-process (serves its own /mcp path). Agora cloud
 # reaches it at <public-url>/mcp — same process, same port as the token endpoints.
 app.mount("/", _mcp_asgi)
 
