@@ -26,7 +26,7 @@
     "verify:web:api": "cd web && bun run scripts/verify-api-contracts.ts",
     "verify:web:proxy": "cd web && bun run scripts/verify-local-proxy.ts",
     "verify:web:build": "cd web && bun run build",
-    "verify:backend": "python3 -m py_compile server/src/server.py server/src/agent.py server/src/mcp_server.py server/src/game.py server/src/mcp_config.py",
+    "verify:backend": "python3 -m py_compile server/src/server.py server/src/agent.py server/src/mcp_server.py server/src/board.py server/src/mcp_config.py",
     "verify:local": "bun run doctor:local && bun run verify:backend && bun run verify:web:proxy && bun run verify:web:build",
     "clean": "rm -rf server/venv server/__pycache__ server/src/__pycache__ node_modules web/node_modules web/.next web/dist"
   },

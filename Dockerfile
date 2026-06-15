@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir -r /tmp/server-req.txt
 
 COPY --chown=app:app server/src /app/server/src
 
-ENV RPG_DB_PATH=/tmp/rpg.db
+ENV BOARD_DB_PATH=/tmp/board.db
 
 USER app
 
