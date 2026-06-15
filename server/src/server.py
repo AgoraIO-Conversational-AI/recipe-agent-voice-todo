@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Agora Agent & Token Service — MCP Recipe
+Agora Agent & Token Service — Todo Recipe
 
 HTTP APIs:
 - GET  /get_config     -> Generate connection config
@@ -24,6 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from agora_agent.agentkit.token import generate_convo_ai_token
 from agent import Agent
+import board
 
 # --- MCP mount (single-process): serve the FastMCP game server in this uvicorn ---
 from contextlib import asynccontextmanager
@@ -72,9 +73,9 @@ except ValueError as e:
 
 # FastAPI application
 app = FastAPI(
-    title="Agora MCP Recipe Service",
+    title="Agora Todo Recipe Service",
     version="1.0.0",
-    description="Agora Conversational AI with MCP tool calling",
+    description="Agora Conversational AI voice todo board with MCP tool calling",
     lifespan=_lifespan,
 )
 
@@ -105,7 +106,7 @@ class StopAgentRequest(BaseModel):
 
 # API endpoints
 def _generate_channel_name() -> str:
-    return f"mcp-{int(time.time())}-{random.randint(1000, 9999)}"
+    return f"todo-{int(time.time())}-{random.randint(1000, 9999)}"
 
 
 @router.get("/get_config")
@@ -201,6 +202,27 @@ async def stop_agent(request: StopAgentRequest):
     except Exception as e:
         _log_route_error("/stopAgent", e, agentId=request.agentId)
         raise _to_http_error(e)
+
+
+@router.get("/board")
+async def get_board():
+    """Return the current kanban snapshot for the web client to render."""
+    conn = board.get_db()
+    try:
+        return {"code": 0, "data": board.snapshot(conn), "msg": "success"}
+    finally:
+        conn.close()
+
+
+@router.post("/board/reset")
+async def reset_board():
+    """Clear the board and restore the seed tasks."""
+    conn = board.get_db()
+    try:
+        board.reset(conn)
+        return {"code": 0, "data": board.snapshot(conn), "msg": "success"}
+    finally:
+        conn.close()
 
 
 app.include_router(router)
