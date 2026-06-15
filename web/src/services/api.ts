@@ -1,3 +1,5 @@
+import type { BoardSnapshot } from '../types/board'
+
 const API_BASE_URL = '/api'
 
 export interface GetConfigResponse {
@@ -68,4 +70,28 @@ export async function stopAgent(agentId: string): Promise<void> {
     const error = await response.json()
     throw new Error(error.detail || `HTTP ${response.status}`)
   }
+}
+
+export async function getBoard(): Promise<BoardSnapshot> {
+  const response = await fetch(`${API_BASE_URL}/board`, { method: 'GET' })
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`)
+  }
+  const result = await response.json()
+  if (result.code !== 0 || !result.data) {
+    throw new Error(result.msg || 'Failed to get board')
+  }
+  return result.data as BoardSnapshot
+}
+
+export async function resetBoard(): Promise<BoardSnapshot> {
+  const response = await fetch(`${API_BASE_URL}/board/reset`, { method: 'POST' })
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`)
+  }
+  const result = await response.json()
+  if (result.code !== 0 || !result.data) {
+    throw new Error(result.msg || 'Failed to reset board')
+  }
+  return result.data as BoardSnapshot
 }
