@@ -6,6 +6,19 @@ keyless OpenAI assistant manages a 3-column kanban by calling **MCP board tools*
 the FastMCP todo server is mounted in-process inside the API server at `/mcp`
 (served on :8000); `MCP_ENDPOINT` must be public via ngrok.
 
+## How to Load
+
+This repository uses progressive disclosure documentation. Docs live under
+`docs/ai/` in three levels.
+
+1. Read [docs/ai/L0_repo_card.md](docs/ai/L0_repo_card.md) to identify the repo.
+2. This repo declares `Recipe Role: base`; read [docs/ai/RECIPE.md](docs/ai/RECIPE.md) before changing reusable recipe contracts.
+3. Load ALL 8 files in [docs/ai/L1/](docs/ai/L1/). They are small — load all upfront.
+4. Follow L2 deep-dive links only when L1 isn't detailed enough. The index is at [docs/ai/L1/L2/_index.md](docs/ai/L1/L2/_index.md).
+
+The sections below remain the canonical contributor handbook for hands-on work;
+the `docs/ai/` tree is the structured summary used by AI agents.
+
 ## System shape
 
 - **`server/`** — Python FastAPI agent backend (:8000). Owns Agora token
@@ -110,11 +123,37 @@ Narrower checks: `bun run verify:backend`, `bun run verify:web:proxy`.
 4. If you change required env vars or setup steps, update the root README, the
    relevant module README, and `server/.env.example` together.
 
-## Git conventions
+## Git Conventions
 
-- Conventional Commits: `type: description` or `type(scope): description`
-  (`feat`, `fix`, `chore`, `test`, `docs`). Lowercase after the prefix, present
-  tense.
-- No AI tool names in commit messages or PR descriptions. No `Co-Authored-By`
-  trailers. No `--no-verify`. No git config changes.
-- Branch names: `type/short-description` (e.g. `feat/add-board-tool`).
+### Commit messages — conventional commits
+
+- **Format:** `type: description` or `type(scope): description`
+- **Types:** `feat:` (new feature), `fix:` (bug fix), `chore:` (maintenance, version bumps), `test:` (test additions/changes), `docs:` (documentation)
+- **Scoped variant:** `feat(scope):`, `fix(scope):` — e.g. `fix(server): validate mcp endpoint`
+- **Lowercase after prefix** — `feat: add feature`, not `feat: Add feature`
+- **Present tense** — "add feature", not "added feature"
+
+### Branch names
+
+- **Format:** `type/short-description` — lowercase, hyphen-separated
+- **Types match commit types:** `feat/`, `fix/`, `chore/`, `test/`, `docs/`
+- **Examples:** `feat/add-board-tool`, `fix/mcp-endpoint-validation`, `docs/progressive-disclosure`
+
+### General rules
+
+- **Repo-local `AGENTS.md` is the authoritative source for repo conventions.**
+- **No AI tool names** — never mention claude, cursor, copilot, cody, aider, gemini, codex, chatgpt, or gpt-3/4 in commit messages or PR descriptions.
+- **No Co-Authored-By trailers** — omit AI attribution lines.
+- **No `--no-verify`** — let git hooks run normally.
+- **No git config changes** — do not modify `user.name` or `user.email`.
+
+## Doc Commands
+
+| Command       | When to use                                                                  |
+| ------------- | ---------------------------------------------------------------------------- |
+| generate docs | No `docs/ai/` directory exists yet                                           |
+| update docs   | Code changed since the `Last Reviewed` date in L0                            |
+| test docs     | Verify docs give agents the right context (writes `docs/ai/test-results.md`) |
+| fix docs      | Close findings from a docs review or test run                                |
+
+See the [progressive disclosure standard](https://github.com/AgoraIO-Community/ai-devkit/blob/main/docs/standard/progressive-disclosure-standard.md) and [workflows](https://github.com/AgoraIO-Community/ai-devkit/blob/main/docs/workflows/progressive-disclosure-docs.md) for the full specification.
